@@ -79,6 +79,8 @@
         this.loginAction = function() {
             $('#content').html((self.getTemplate('login')));
 
+            $('.login').css('top', (($(window).height() / 2) - ($('.login').height() / 2)));
+
             $('#loginForm').on('submit', function(){
                 self.sendAjax($(this).attr('action'), $(this).attr('method'), $(this).serialize());
 
