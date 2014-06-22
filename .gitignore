@@ -1,0 +1,4 @@
+/vendor/
+/*.log
+/.idea/
+/application/core/config/*.php

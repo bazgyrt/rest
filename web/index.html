@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <link type="text/css" rel="stylesheet" href="css/base.css">
+</head>
+<body>
+    <div id="content">
+
+    </div>
+    <div id="shadow"></div>
+    <div id="modal" style="">
+        <div><b id="title"></b></div>
+        <div id="modal_content"></div>
+        <div id="close">&times;</div>
+    </div>
+<script src="js/jquery-1.11.1.min.js"></script>
+<script>
+    var app = function() {
+        var url,
+            root,
+            success,
+            token,
+            id,
+            action = false,
+            self = this;
+
+        this.init = function() {
+            self.root = "web";
+            self.setUrl();
+        }
+
+        this.setUrl = function(url) {
+            if (typeof url === "undefined") url = location.href;
+            else url = "http://" +  location.host + "/" + self.root + "/" + url;
+
+            location.href = url;
+
+            var exp = new RegExp("http://" + location.host + "/" + self.root + "(/#)?/?", 'i');
+            self.url = url.replace(exp, "");
+            if (self.url == "") self.url = "login";
+            self.getAction();
+        };
+
+        this.getAction = function() {
+            var fn = self[self.url + 'Action'];
+
+            self.action = false;
+
+            if (typeof fn === "function") fn();
+        }
+
+        this.logoutAction = function() {
+            delete self.token;
+            delete self.id;
+            self.setUrl('#/login');
+        }
+
+        this.userAction = function() {
+            if (typeof self.token === "undefined") {
+                self.setUrl('#/login');
+            } else {
+                $('#content').html((self.getTemplate('user')));
+
+                $('#user').on('click', function(){
+
+                    var url = '/users/user/' + self.id + '/' + self.token;
+                    self.sendAjax(url, 'get');
+
+                    self.showMessage(self.data, "Информация о пользователе", "object");
+                    return false;
+                })
+            }
+
+
+        }
+
+        this.loginAction = function() {
+            $('#content').html((self.getTemplate('login')));
+
+            $('#loginForm').on('submit', function(){
+                self.sendAjax($(this).attr('action'), $(this).attr('method'), $(this).serialize());
+
+                if (self.success) {
+                    self.token = self.data.token;
+                    self.id = self.data.id;
+                    self.setUrl("#/user");
+                } else {
+                    self.showMessage();
+                }
+                return false;
+            })
+        }
+
+        this.registrationAction = function() {
+            $('#content').html(self.getTemplate('registration'));
+
+            $('#registration').on('submit', function(){
+                self.sendAjax($(this).attr('action'), $(this).attr('method'), $(this).serialize());
+                if (self.success) {
+                    self.setUrl("#/login");
+                } else {
+                    self.showMessage();
+                }
+                return false;
+            })
+        }
+
+        this.getTemplate = function(template) {
+            $.ajax({
+                url: "templates/" + template + ".html",
+                type: "GET",
+                dataType: "html",
+                async: false,
+                success: function(data) {
+                    template = data.replace(/\r\n/g, "");
+                }
+            })
+            return template;
+        }
+
+        this.showMessage = function(data, title, type) {
+            if (typeof data === "undefined") data = self.data;
+            if (typeof title === "undefined") title = "Внимание! Обнаружены следующие ошибки:";
+            if (typeof type === "undefined") type = "array";
+
+            $('#modal, #shadow').show(); // Покажем окно
+
+            if (type === "array") { // Если данные представленны в виде массива или строки
+                if (typeof data === 'object') $('#modal #modal_content').html(data.join("<br/>"));
+                else $('#modal #modal_content').html(data);
+            } else if (type === "object") { // Если данные представленны в виде объекта
+                var str = "";
+                for(var field in data) {
+                    str += self.__(field) + ": "+ data[field] +"<br/>";
+                }
+                $('#modal #modal_content').html(str);
+                $('#modal #title').html(title);
+            }
+            return false;
+        }
+
+        this.sendAjax = function(url, type, data) {
+            if (typeof url === "undefined") url = self.url;
+            if (typeof type === "undefined") type = "GET";
+            if (typeof data === "undefined") data = "";
+
+            $.ajax({
+                url: url,
+                type: type,
+                data: data,
+                dataType: "json",
+                async: false,
+                success: function(data) {
+                    self.data = data.data;
+
+                    self.success = data.success;
+                    return false;
+                }
+            })
+        }
+
+        this.__ = function(str) {
+            var ar = self.translate();
+
+            if (typeof ar[str] !== "undefined") return ar[str];
+            else return str;
+        }
+
+        this.translate = function() {
+            return {
+                'login': "Логин",
+                'password': "Пароль",
+                'confirm_password': "Подтвердите пароль",
+                'firstname': "Имя",
+                'lastname': "Фамилия",
+                'phone': "Телефон"
+            }
+        }
+
+        return this;
+    }
+
+    var a = new app();
+    a.init();
+
+    //a.sendAjax();
+    $('#content').on('click', 'a', function(){
+        a.setUrl($(this).attr('href'));
+        //a.sendAjax();
+    });
+
+    $('#modal').css('left', (($(window).width() / 2) - ($('#modal').width() / 2)));
+    $('#close').on('click', function(){
+        $('#modal, #shadow').hide();
+        return false;
+    });
+</script>
+</body>
+</html>
